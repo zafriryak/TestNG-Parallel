@@ -137,9 +137,7 @@ public class BaseTest implements ITest {
 				throw new Exception(annotationMissingError);
 			} catch (Exception e) {
 				e.printStackTrace();
-			} finally {
-				System.exit(1);
-			}
+			} 
 		}
 
 		if (testMethod.getAnnotation(EnableRetry.class) != null)
