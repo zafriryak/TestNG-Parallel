@@ -1,0 +1,112 @@
+<!DOCTYPE scenarios [
+ <!ENTITY Sut1 "LinuxMachine">
+  <!ENTITY Sut2 "WindowsMachine">
+]>
+
+<scenarios>
+	<testclass name="DifidoReporterTestsPart1">
+		<testmethod name="simpleReportCall0">
+			<sut name="&Sut1;">
+				<iteration param1="arg0" param2="arg1"></iteration>
+			</sut>
+		</testmethod>
+
+		<testmethod name="parallelTest">
+			<sut name="&Sut1;">
+				<iteration param1="arg0" param2="arg1"></iteration>
+				<iteration param1="arg2" param2="arg3"></iteration>
+				<iteration param1="arg4" param2="arg5"></iteration>
+				<iteration param1="arg6" param2="arg7"></iteration>
+				<iteration param1="arg8" param2="arg9"></iteration>
+				<iteration param1="arg10" param2="arg11"></iteration>
+				<iteration param1="arg12" param2="arg13"></iteration>
+			</sut>
+		</testmethod>
+
+		<testmethod name="testWithInsufficientMandatoryParams">
+			<sut name="&Sut1;">
+				<iteration param1="arg0"></iteration>
+			</sut>
+		</testmethod>
+
+
+		<testmethod name="testWithNoParameters">
+			<sut name="&Sut1;">
+				<iteration></iteration>
+			</sut>
+		</testmethod>
+
+		<testmethod name="testWithFailure">
+			<sut name="&Sut1;">
+				<iteration param1="arg0"></iteration>
+			</sut>
+		</testmethod>
+
+		<testmethod name="testFailOnBeforeMethod">
+			<sut name="&Sut1;">
+				<iteration param1="failOnBeforeMethod"></iteration>
+			</sut>
+		</testmethod>
+
+		<testmethod name="testWithRetryFailure">
+			<sut name="&Sut1;">
+				<iteration param1="arg0" param2="arg1"></iteration>
+			</sut>
+		</testmethod>
+		<testmethod name="anotherRandomTest">
+			<sut name="&Sut1;">
+				<iteration param1="arg0" param2="arg1" param3=""></iteration>
+			</sut>
+		</testmethod>
+	</testclass>
+	<testclass name="DifidoReporterTestsPart2">
+		<testmethod name="testWithWrongParallelMethodSignature">
+			<sut name="&Sut1;">
+				<iteration param1="arg0" param2="arg1"></iteration>
+			</sut>
+		</testmethod>
+		<testmethod name="testWithError">
+			<sut name="&Sut1;">
+				<iteration param1="arg0"></iteration>
+			</sut>
+		</testmethod>
+		<testmethod name="testWithEncoding">
+			<sut name="&Sut1;">
+				<iteration param1="arg0" param2="arg1"></iteration>
+			</sut>
+		</testmethod>
+		<testmethod name="testWithWarning">
+			<sut name="&Sut1;">
+				<iteration param1="arg0" param2="arg1"></iteration>
+			</sut>
+		</testmethod>
+		<testmethod name="testWithVariousLogMessages">
+			<sut name="&Sut1;">
+				<iteration param1="arg0" param2="arg1"></iteration>
+			</sut>
+		</testmethod>
+		<testmethod name="testAddFile">
+			<sut name="&Sut1;">
+				<iteration param1="arg0" param2="arg1"></iteration>
+			</sut>
+		</testmethod>
+		<testmethod name="testAddScreenshot">
+			<sut name="&Sut1;">
+				<iteration param1="arg0" param2="arg1"></iteration>
+			</sut>
+		</testmethod>
+
+		<testmethod name="testAddFile">
+			<sut name="&Sut1;">
+				<iteration param1="arg0" param2="arg1"></iteration>
+			</sut>
+		</testmethod>
+
+		<testmethod name="testAddScreenshot">
+			<sut name="&Sut1;">
+				<iteration param1="arg0" param2="arg1"></iteration>
+			</sut>
+		</testmethod>
+
+	</testclass>
+</scenarios>

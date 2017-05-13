@@ -1,0 +1,1 @@
+var test = {"uid":"test_1271494712706-67","reportElements":[{"title":"TestCases.xml error","message":"Parallel framework exception:  wrong method signature!test method: testWithWrongParallelMethodSignature must contain an Iteration argument, in class: DifidoReporterTestsPart2","status":"failure","type":"regular","time":"2017-05-14"}]};

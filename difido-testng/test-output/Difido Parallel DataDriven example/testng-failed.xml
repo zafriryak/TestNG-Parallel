@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE suite SYSTEM "http://testng.org/testng-1.0.dtd">
+<suite guice-stage="DEVELOPMENT" name="Failed suite [Difido Parallel DataDriven example]" parallel="methods" data-provider-thread-count="5">
+  <parameter name="TestCasesFilePath" value="testcases.xml"/>
+  <test name="First Wave(failed)" parallel="methods">
+    <classes>
+      <class name="il.co.topq.difido.DifidoReporterTestsPart1">
+        <methods>
+          <include name="suitePreConfigure"/>
+          <include name="setUp"/>
+          <include name="tearDown"/>
+          <include name="testWithNoParameters"/>
+          <include name="testWithFailure" invocation-numbers="0"/>
+          <include name="testFailOnBeforeMethod"/>
+        </methods>
+      </class> <!-- il.co.topq.difido.DifidoReporterTestsPart1 -->
+    </classes>
+  </test> <!-- First Wave(failed) -->
+  <test name="Second Wave(failed)">
+    <classes>
+      <class name="il.co.topq.difido.DifidoReporterTestsPart2">
+        <methods>
+          <include name="suitePreConfigure"/>
+          <include name="tearDown"/>
+          <include name="testWithWrongParallelMethodSignature"/>
+          <include name="setUp"/>
+        </methods>
+      </class> <!-- il.co.topq.difido.DifidoReporterTestsPart2 -->
+    </classes>
+  </test> <!-- Second Wave(failed) -->
+  <test name="Fourth Wave(failed)" parallel="methods">
+    <classes>
+      <class name="il.co.topq.difido.DifidoReporterTestsPart1">
+        <methods>
+          <include name="suitePreConfigure"/>
+          <include name="setUp"/>
+          <include name="tearDown"/>
+          <include name="testWithFailure" invocation-numbers="0"/>
+          <include name="testFailOnBeforeMethod"/>
+        </methods>
+      </class> <!-- il.co.topq.difido.DifidoReporterTestsPart1 -->
+      <class name="il.co.topq.difido.DifidoReporterTestsPart2">
+        <methods>
+          <include name="suitePreConfigure"/>
+          <include name="tearDown"/>
+          <include name="testWithWrongParallelMethodSignature"/>
+          <include name="setUp"/>
+        </methods>
+      </class> <!-- il.co.topq.difido.DifidoReporterTestsPart2 -->
+    </classes>
+  </test> <!-- Fourth Wave(failed) -->
+</suite> <!-- Failed suite [Difido Parallel DataDriven example] -->

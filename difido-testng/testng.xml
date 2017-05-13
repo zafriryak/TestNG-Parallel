@@ -1,0 +1,44 @@
+<!DOCTYPE suite SYSTEM "http://testng.org/testng-1.0.dtd" >
+<suite name="Difido Parallel DataDriven example"
+       verbose="1" 
+       preserve-order="true"
+	   parallel="methods" 
+	   group-by-instances="true"
+	   data-provider-thread-count="8">
+
+	<parameter name="TestCasesFilePath" value="testcases.xml" />
+	
+
+	<test name="First Wave" parallel="true">
+		<classes>
+			<class name="il.co.topq.difido.DifidoReporterTestsPart1">
+				<methods>
+					<exclude name="parallelTest"></exclude>
+				</methods>
+			</class>
+		</classes>
+	</test>
+
+	<test name="Second Wave" parallel="false">
+		<classes>
+			<class name="il.co.topq.difido.DifidoReporterTestsPart2" />
+		</classes>
+	</test>
+
+	<test name="Third Wave" parallel="true">
+		<classes>
+			<class name="il.co.topq.difido.DifidoReporterTestsPart1" >
+			<methods>
+					<include name="parallelTest"></include>
+				</methods>
+			</class>
+		</classes>
+	</test>
+	
+	<test name="Fourth Wave" parallel="true">
+		<classes>
+			<class name="il.co.topq.difido.DifidoReporterTestsPart1"/>
+			<class name="il.co.topq.difido.DifidoReporterTestsPart2"/>
+		</classes>
+	</test>
+</suite>
