@@ -205,7 +205,8 @@ public class PersistenceUtils {
 			// situations in which we try to read a file that is not completed
 			String json = mapper.writeValueAsString(testDetails);
 			json = "var test = " + json + ";";
-			FileUtils.write(tempFile, json);
+			String encoding = null;
+			FileUtils.write(tempFile, json,encoding);
 			log.fine("Test details was written to file " + tempFile.getAbsolutePath());
 			Files.move(tempFile.toPath(), finalFile.toPath(), REPLACE_EXISTING);
 			log.fine("Test details was moved to file " + finalFile.getAbsolutePath());

@@ -1,23 +1,15 @@
 package il.co.topq.difido;
 
-import il.co.topq.difido.PersistenceUtils;
 import il.co.topq.difido.model.execution.Execution;
 import il.co.topq.difido.model.execution.ScenarioNode;
 import il.co.topq.difido.model.test.TestDetails;
-
-import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
+import org.apache.commons.io.FileUtils;
+import org.testng.ISuite;
 
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.util.logging.Logger;
-
-import org.apache.commons.io.FileUtils;
-import org.testng.ISuite;
-import org.testng.ITestResult;
-
-import com.fasterxml.jackson.databind.ObjectMapper;
 
 public class LocalDifidoReporter extends AbstractDifidoReporter {
 
