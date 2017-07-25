@@ -3,6 +3,9 @@ package il.co.topq.difido;
 import java.io.File;
 
 import il.co.topq.difido.model.Enums.Status;
+import org.testng.IInvokedMethod;
+import org.testng.ITestContext;
+import org.testng.ITestResult;
 
 public interface ReportDispatcher {
 
@@ -37,6 +40,12 @@ public interface ReportDispatcher {
 	String getCurrentTestFolder();
 	
 	Status getCurrentTestStatus();
-	
 
+	public void beforeInvocation(IInvokedMethod method, ITestResult testResult, ITestContext context);
+
+	public void afterInvocation(IInvokedMethod method, ITestResult testResult, ITestContext context);
+
+	public void beforeInvocation(IInvokedMethod method, ITestResult testResult);
+
+	public void afterInvocation(IInvokedMethod method, ITestResult testResult);
 }

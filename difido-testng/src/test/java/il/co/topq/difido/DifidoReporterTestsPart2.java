@@ -24,7 +24,7 @@ public class DifidoReporterTestsPart2 extends BaseTest {
 
 	@BeforeMethod()
 	protected void setUp(Object... params) throws Exception {
-		report.startLevel("setup");
+		report.startLevel("setUp");
 		super.setUp(params);
 		report.log("Test class before method");
 		report.endLevel();

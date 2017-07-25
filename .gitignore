@@ -2,8 +2,9 @@
 /*/target/
 *iml
 /.idea/
-/difido-reports-common/target/classes/META-INF/
+/difido-reports-common/target/
 difido-testng/test-output/*
 .metadata/*
 RemoteSystemsTempFiles/*
 Servers/*
+

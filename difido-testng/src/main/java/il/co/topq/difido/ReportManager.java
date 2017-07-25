@@ -1,24 +1,31 @@
 package il.co.topq.difido;
 
+import il.co.topq.difido.model.Enums.ElementType;
+import il.co.topq.difido.model.Enums.Status;
+import org.testng.*;
+
 import java.io.File;
-import java.lang.annotation.Annotation;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.locks.StampedLock;
 
-import org.testng.Assert;
-import org.testng.ISuite;
-import org.testng.ITestContext;
-import org.testng.ITestResult;
-
-import il.co.topq.difido.model.Enums.ElementType;
-import il.co.topq.difido.model.Enums.Status;
-
 public class ReportManager implements ReportDispatcher {
 
-	private ThreadLocal<Status> testStatus = new ThreadLocal<>();
 	private static ReportManager instance;
 	private final List<Reporter> reporters;
+	private ThreadLocal<Status> testStatus = new ThreadLocal<>();
+	/*
+	 * (non-Javadoc)
+	 *
+	 * @see il.co.topq.difido.ReportDispatcher#startLevel(java.lang.String)
+	 */
+	private StampedLock logLock = new StampedLock();
+	/*
+	 * (non-Javadoc)
+	 *
+	 * @see il.co.topq.difido.ReportDispatcher#endLevel()
+	 */
+	private StampedLock endLevelLock = new StampedLock();
 
 	public ReportManager() {
 		reporters = new LinkedList<Reporter>();
@@ -49,8 +56,15 @@ public class ReportManager implements ReportDispatcher {
 		log(title, message, status, ElementType.html);
 	}
 
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see il.co.topq.difido.ReportDispatcher#log(java.lang.String)
+	 */
+
 	public void log(String title, String message, Status status, ElementType type) {
-		for (Reporter reporter : reporters){
+		updateStatus(status);
+		for (Reporter reporter : reporters) {
 			reporter.log(title, message, status, type);
 		}
 	}
@@ -58,7 +72,23 @@ public class ReportManager implements ReportDispatcher {
 	/*
 	 * (non-Javadoc)
 	 * 
-	 * @see il.co.topq.difido.ReportDispatcher#log(java.lang.String)
+	 * @see il.co.topq.difido.ReportDispatcher#log(java.lang.String,
+	 * il.co.topq.difido.model.Enums.Status)
+	 */
+
+	private void updateStatus(Status status) {
+		Status currentStatus = testStatus.get();
+		if ((null == currentStatus) || (currentStatus.ordinal() < status.ordinal())) {
+			testStatus.set(status);
+		}
+
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see il.co.topq.difido.ReportDispatcher#log(java.lang.String,
+	 * java.lang.String)
 	 */
 
 	@Override
@@ -70,7 +100,7 @@ public class ReportManager implements ReportDispatcher {
 	 * (non-Javadoc)
 	 * 
 	 * @see il.co.topq.difido.ReportDispatcher#log(java.lang.String,
-	 * il.co.topq.difido.model.Enums.Status)
+	 * java.lang.String, il.co.topq.difido.model.Enums.Status)
 	 */
 
 	@Override
@@ -78,37 +108,16 @@ public class ReportManager implements ReportDispatcher {
 		log(title, null, status, ElementType.regular);
 	}
 
-	/*
-	 * (non-Javadoc)
-	 * 
-	 * @see il.co.topq.difido.ReportDispatcher#log(java.lang.String,
-	 * java.lang.String)
-	 */
-
 	@Override
 	public void log(String title, String message) {
 		log(title, message, Status.success, ElementType.regular);
 
 	}
 
-	/*
-	 * (non-Javadoc)
-	 * 
-	 * @see il.co.topq.difido.ReportDispatcher#log(java.lang.String,
-	 * java.lang.String, il.co.topq.difido.model.Enums.Status)
-	 */
-
 	@Override
 	public synchronized void log(String title, String message, Status status) {
 		log(title, message, status, ElementType.regular);
 	}
-
-	/*
-	 * (non-Javadoc)
-	 * 
-	 * @see il.co.topq.difido.ReportDispatcher#startLevel(java.lang.String)
-	 */
-	private StampedLock logLock = new StampedLock();
 
 	@Override
 	public void startLevel(String description) {
@@ -119,13 +128,6 @@ public class ReportManager implements ReportDispatcher {
 			logLock.unlockWrite(sLock);
 		}
 	}
-
-	/*
-	 * (non-Javadoc)
-	 * 
-	 * @see il.co.topq.difido.ReportDispatcher#endLevel()
-	 */
-	private StampedLock endLevelLock = new StampedLock();
 
 	@Override
 	public void endLevel() {
@@ -199,20 +201,18 @@ public class ReportManager implements ReportDispatcher {
 			reporter.beforeConfiguration(result);
 		}
 	}
-	
+
 	public void onConfigurationSuccess(ITestResult result) {
 		for (Reporter reporter : reporters) {
 			reporter.onConfigurationSuccess(result);
 		}
 	}
-	
+
 	public void onConfigurationFailure(ITestResult result) {
 		for (Reporter reporter : reporters) {
 			reporter.onConfigurationFailure(result);
 		}
 	}
-
-	
 
 	public void onConfigurationSkip(ITestResult result) {
 		for (Reporter reporter : reporters) {
@@ -296,37 +296,75 @@ public class ReportManager implements ReportDispatcher {
 
 	@Override
 	public Status getCurrentTestStatus() {
-		return testStatus.get();
-	}
-	
-	public void validateTestClassNode(String testWave, String testClass,
-			 Exception e) {
 		for (Reporter reporter : reporters) {
-			reporter.validateTestClassNode(testWave, testClass,e);
+
 		}
-		
+		return testStatus.get();
+
 	}
 
-	public void validateTestMethodNode(String testWave, String testClass,
-			String testMethod, Exception e) {
-		for (Reporter reporter : reporters) {
-			reporter.validateTestMethodNode(testWave, testClass,testMethod,e);
-		}
-		
+	@Override
+	public void beforeInvocation(IInvokedMethod method, ITestResult testResult, ITestContext context) {
+		//empty implementation, I think there's nothing to do here.
 	}
-	
-	public void validateTestNGMethodSignature(String testWave, String testClass,
-			String testMethod, Exception e) {
-		for (Reporter reporter : reporters) {
-			reporter.validateTestNGMethodSignature(testWave, testClass,testMethod,e);
-		}
-		
+
+	@Override
+	public void afterInvocation(IInvokedMethod method, ITestResult testResult, ITestContext context) {
+		failTestNG(testResult);
 	}
-	
-	public void validateTestMandatoryParamsAlert(String testWave, String testClass,
-			String testMethod, Exception e) {
+
+	@Override
+	public void beforeInvocation(IInvokedMethod method, ITestResult testResult) {
+		//empty implementation, I think there's nothing to do here.
+	}
+
+	private void failTestNG(ITestResult testResult) {
+
+		Status status = testStatus.get();
+		if (null != status) {
+			switch (status) {
+			case warning:
+				break;
+			case error:
+				Assert.fail("Test status is error");
+			case failure:
+				testResult.setStatus(ITestResult.FAILURE);
+			case in_progress:
+			case success:
+				break;
+			}
+		}
+	}
+
+	@Override
+	public void afterInvocation(IInvokedMethod method, ITestResult testResult) {
+		failTestNG(testResult);
+	}
+
+	public void validateTestClassNode(String testWave, String testClass, Exception e) {
 		for (Reporter reporter : reporters) {
-			reporter.validateTestMandatoryParamsAlert(testWave, testClass,testMethod,e);
+			reporter.validateTestClassNode(testWave, testClass, e);
+		}
+
+	}
+
+	public void validateTestMethodNode(String testWave, String testClass, String testMethod, Exception e) {
+		for (Reporter reporter : reporters) {
+			reporter.validateTestMethodNode(testWave, testClass, testMethod, e);
+		}
+
+	}
+
+	public void validateTestNGMethodSignature(String testWave, String testClass, String testMethod, Exception e) {
+		for (Reporter reporter : reporters) {
+			reporter.validateTestNGMethodSignature(testWave, testClass, testMethod, e);
+		}
+
+	}
+
+	public void validateTestMandatoryParamsAlert(String testWave, String testClass, String testMethod, Exception e) {
+		for (Reporter reporter : reporters) {
+			reporter.validateTestMandatoryParamsAlert(testWave, testClass, testMethod, e);
 		}
 
 	}

@@ -1,5 +1,20 @@
 package il.co.topq.difido;
 
+import il.co.topq.difido.model.Enums.ElementType;
+import il.co.topq.difido.model.Enums.Status;
+import il.co.topq.difido.model.execution.Execution;
+import il.co.topq.difido.model.execution.MachineNode;
+import il.co.topq.difido.model.execution.ScenarioNode;
+import il.co.topq.difido.model.execution.TestNode;
+import il.co.topq.difido.model.test.ReportElement;
+import il.co.topq.difido.model.test.TestDetails;
+import org.eclipse.jetty.util.ConcurrentHashSet;
+import org.testng.ISuite;
+import org.testng.ITestContext;
+import org.testng.ITestResult;
+import org.testng.annotations.BeforeClass;
+import org.testng.annotations.BeforeSuite;
+
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
@@ -16,20 +31,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.StampedLock;
-import org.eclipse.jetty.util.ConcurrentHashSet;
-import org.testng.ISuite;
-import org.testng.ITestContext;
-import org.testng.ITestResult;
-import org.testng.annotations.BeforeClass;
-import org.testng.annotations.BeforeSuite;
-import il.co.topq.difido.model.Enums.ElementType;
-import il.co.topq.difido.model.Enums.Status;
-import il.co.topq.difido.model.execution.Execution;
-import il.co.topq.difido.model.execution.MachineNode;
-import il.co.topq.difido.model.execution.ScenarioNode;
-import il.co.topq.difido.model.execution.TestNode;
-import il.co.topq.difido.model.test.ReportElement;
-import il.co.topq.difido.model.test.TestDetails;
 
 /**
  * @author Ben Mark
@@ -51,7 +52,6 @@ public abstract class AbstractDifidoReporter implements Reporter {
 	private ThreadLocal<TestDetails> testDetails = new ThreadLocal<TestDetails>();
 	private ThreadLocal<TestNode> currentTest = new ThreadLocal<TestNode>();
 	private AtomicInteger index = new AtomicInteger(0);
-
 	private volatile ThreadLocal<String> testClassName = new ThreadLocal<String>();
 	private AtomicLong lastWrite = new AtomicLong();
 	private final StampedLock onBeforeConfigLock = new StampedLock();
@@ -74,9 +74,6 @@ public abstract class AbstractDifidoReporter implements Reporter {
 	private ConcurrentHashSet<String> testCasesValidationClassSet;
 	private AtomicLong retryTestDuration = new AtomicLong();
 
-	
-	
-	
 	public AbstractDifidoReporter() {
 		testClassNameSet = new ConcurrentHashSet<String>();
 		classNodeMap = new ConcurrentHashMap<String, ScenarioNode>();
@@ -84,6 +81,21 @@ public abstract class AbstractDifidoReporter implements Reporter {
 		testWaveMap = new ConcurrentHashMap<>();
 		retryParentTestNodeMap = new ConcurrentHashMap<>();
 		testCasesValidationClassSet = new ConcurrentHashSet<>();
+	}
+
+	/**
+	 * Occurs once by the Main thread
+	 *
+	 * @return
+	 **/
+	private static String getMachineName() {
+		String machineName;
+		try {
+			machineName = InetAddress.getLocalHost().getHostName();
+		} catch (UnknownHostException e) {
+			machineName = "localhost";
+		}
+		return machineName;
 	}
 
 	@Override
@@ -98,32 +110,26 @@ public abstract class AbstractDifidoReporter implements Reporter {
 	}
 
 	@Override
-	public void validateTestClassNode(String testWave, String testClass,
-			Exception e) {
+	public void validateTestClassNode(String testWave, String testClass, Exception e) {
 		InitACustomTestNode(testWave, testClass, null, e, null);
-		
+
 	}
 
 	@Override
-	public void validateTestMethodNode(String testWave, String testClass,
-			String testMethod, Exception e) {
+	public void validateTestMethodNode(String testWave, String testClass, String testMethod, Exception e) {
 		InitACustomTestNode(testWave, testClass, testMethod, e, null);
 	}
 
 	@Override
-	public void validateTestNGMethodSignature(String testWave, String testClass,
-			String testMethod, Exception e) {
+	public void validateTestNGMethodSignature(String testWave, String testClass, String testMethod, Exception e) {
 		String iterationNodeName = testMethod + " - wrong method signature";
-		InitACustomTestNode(testWave, testClass, testMethod, e,
-				iterationNodeName);
+		InitACustomTestNode(testWave, testClass, testMethod, e, iterationNodeName);
 	}
-	
+
 	@Override
-	public void validateTestMandatoryParamsAlert(String testWave, String testClass,
-			String testMethod, Exception e) {
-		String iterationNodeName = testMethod+" - parameter missing";
-		InitACustomTestNode(testWave, testClass, testMethod, e,
-				iterationNodeName);
+	public void validateTestMandatoryParamsAlert(String testWave, String testClass, String testMethod, Exception e) {
+		String iterationNodeName = testMethod + " - parameter missing";
+		InitACustomTestNode(testWave, testClass, testMethod, e, iterationNodeName);
 	}
 
 	/**
@@ -136,53 +142,51 @@ public abstract class AbstractDifidoReporter implements Reporter {
 		long sLock = onBeforeConfigLock.writeLock();
 		try {
 			initTestIterationNode(result);
-		}
-		finally {
+		} finally {
 			onBeforeConfigLock.unlockWrite(sLock);
 		}
 	}
-	
 
-	protected void initTestIterationNode(ITestResult result) {		
+	protected void initTestIterationNode(ITestResult result) {
 		long sLock = onTestInitLock.writeLock();
 		try {
-
-			if (result.getMethod().getConstructorOrMethod().getMethod()
-					.getAnnotation(BeforeSuite.class) != null)
+			if (null != currentTest.get()) {
 				return;
-			if (result.getMethod().getConstructorOrMethod().getMethod()
-					.getAnnotation(BeforeClass.class) != null)
+			}
+			if (result.getMethod().getConstructorOrMethod().getMethod().getAnnotation(BeforeSuite.class) != null) {
 				return;
+			}
+			if (result.getMethod().getConstructorOrMethod().getMethod().getAnnotation(BeforeClass.class) != null) {
+				return;
+			}
 
 			testTimeElapsed.set(new SimpleDateFormat("HH:mm:ss.SS"));
-			testClassName
-					.set(result.getTestClass().getRealClass().getSimpleName());
+			testClassName.set(result.getTestClass().getRealClass().getSimpleName());
 
 			addClassNodeToTestWave(result);
 
 			String testName;
 			testName = result.getTestName();
-			if (!testName.contains("null")) currentTestNameWasSet.set(true);
+			if (!testName.contains("null")) {
+				currentTestNameWasSet.set(true);
+			}
 			currentThreadId.set(Thread.currentThread().getId());
 			currentTest.set(new TestNode(index.getAndIncrement(), testName,
-					/*testName.replaceAll("[^a-zA-Z0-9]", "")*/  "test_" + generateUid()
-							+ "-" + index.get()));
+					/*testName.replaceAll("[^a-zA-Z0-9]", "")*/  "test_" + generateUid() + "-" + index.get()));
 
 			testDetails.set(new TestDetails(currentTest.get().getUid()));
 			currentTest.get().setParent(classNodeMap.get(testClassName.get()));
 			currentTest.get().setClassName(testClassName.get());
 			Date date = new Date();
-			
+
 			currentTest.get().setTimestamp(String.format("%1$tT (%1$tQ)ms", date));
 			currentTest.get().setDate(DATE_FORMAT.format(date));
 
 			if (result.getMethod().getDescription() != null) {
-				currentTest.get()
-						.setDescription(result.getMethod().getDescription());
+				currentTest.get().setDescription(result.getMethod().getDescription());
 			}
 			updateTestDirectory();
-		}
-		finally {
+		} finally {
 			onTestInitLock.unlockWrite(sLock);
 		}
 	}
@@ -194,19 +198,20 @@ public abstract class AbstractDifidoReporter implements Reporter {
 	 * value it can't be allocated into every thread's stack, therefore it must
 	 * remain shared. To overcome the ambiguity of sharedData being initialized
 	 * on every thread run.
-	 * 
+	 *
 	 * @param result
 	 **/
 	private void addClassNodeToTestWave(ITestResult result) {
 		String className = result.getTestClass().getRealClass().getSimpleName();
 
 		// if this class belongs to a different wave
-		if (testClassNameSet.contains(className)
-				&& !classNodeMap.get(className).getParent().getName()
-						.equals(result.getTestContext().getName())) {
-			if (!testWaveMap.containsKey(result.getTestContext().getName()))
-				currentTestWave = new ScenarioNode(
-						result.getTestContext().getName());
+		if (testClassNameSet.contains(className) && !classNodeMap.get(className)
+				.getParent()
+				.getName()
+				.equals(result.getTestContext().getName())) {
+			if (!testWaveMap.containsKey(result.getTestContext().getName())) {
+				currentTestWave = new ScenarioNode(result.getTestContext().getName());
+			}
 
 			currentClassScenario = new ScenarioNode(className);
 			classNodeMap.put(testClassName.get(), currentClassScenario);
@@ -219,13 +224,11 @@ public abstract class AbstractDifidoReporter implements Reporter {
 			currentClassScenario = new ScenarioNode(className);
 			classNodeMap.putIfAbsent(testClassName.get(), currentClassScenario);
 			if (!testWaveMap.containsKey(result.getTestContext().getName())) {
-				currentTestWave = new ScenarioNode(
-						result.getTestContext().getName());
+				currentTestWave = new ScenarioNode(result.getTestContext().getName());
 
 				currentTestWave.addChild(currentClassScenario);
 			} else {
-				testWaveMap.get(result.getTestContext().getName())
-						.addChild(currentClassScenario);
+				testWaveMap.get(result.getTestContext().getName()).addChild(currentClassScenario);
 			}
 		}
 		// if the concurrent test wave map doesn't contain this specific wave,
@@ -248,53 +251,41 @@ public abstract class AbstractDifidoReporter implements Reporter {
 	public void onTestStart(ITestResult result) {
 		long sLock = onTestStartLock.writeLock();
 		try {
+			initTestIterationNode(result);
 			currentTest.get().setDescription(result.getMethod().getDescription());
-			currentTest.get()
-					.setName(result.getMethod().getConstructorOrMethod()
-							.getMethod().getName() + " - "
-							+ result.getTestName() + " (Thread-id = "
-							+ Thread.currentThread().getId() + ")");
-			
-			if (((RetryAnalyzer) result.getMethod()
-					.getRetryAnalyzer()) != null) {
-				retryTestDuration.set(System.currentTimeMillis());
-				if (((RetryAnalyzer) result.getMethod().getRetryAnalyzer())
-						.getMaxRetryCount() > 0) {
-					if (((RetryAnalyzer) result.getMethod().getRetryAnalyzer())
-							.isParentNode()) {
+			currentTest.get().setName(
+					result.getMethod().getConstructorOrMethod().getMethod().getName() + " - " + result.getTestName()
+							+ " (Thread-id = " + Thread.currentThread().getId() + ")");
 
-						currentRetryParentTest.set(
-								new ScenarioNode(currentTest.get().getName()));
-						String methodName = "retry -" + result.getMethod()
-								.getConstructorOrMethod().getMethod().getName()
-								+ " ";
-						currentTest.get()
-								.setName(methodName + result.getTestName());
-						currentRetryParentTest.get().setParent(
-								classNodeMap.get(testClassName.get()));
+			if (((RetryAnalyzer) result.getMethod().getRetryAnalyzer()) != null) {
+				retryTestDuration.set(System.currentTimeMillis());
+				if (((RetryAnalyzer) result.getMethod().getRetryAnalyzer()).getMaxRetryCount() > 0) {
+					if (((RetryAnalyzer) result.getMethod().getRetryAnalyzer()).isParentNode()) {
+
+						currentRetryParentTest.set(new ScenarioNode(currentTest.get().getName()));
+						String methodName =
+								"retry -" + result.getMethod().getConstructorOrMethod().getMethod().getName() + " ";
+						currentTest.get().setName(methodName + result.getTestName());
+						currentRetryParentTest.get().setParent(classNodeMap.get(testClassName.get()));
 						currentTest.get().setDuration(0);
 
 						Date date = new Date();
 						currentTest.get().setTimestamp(String.format("%1$tT (%1$tQ)ms", date));
-						currentTest.get().setDate(DATE_FORMAT.format(date));;
-						retryParentTestNodeMap.putIfAbsent(
-								currentRetryParentTest.get().getName(),
-								currentRetryParentTest.get());
+						currentTest.get().setDate(DATE_FORMAT.format(date));
+						;
+						retryParentTestNodeMap.putIfAbsent(currentRetryParentTest.get().getName(),
+														   currentRetryParentTest.get());
 						// if (onFailLock.tryUnlockWrite()) onFailLock.wait();
 						isRetryEnabled.set(true);
 						onConfigurationOrOnTestFailure(result);
 					} else {
-						currentTest.get().setParent(retryParentTestNodeMap
-								.get(currentTest.get().getName()));
+						currentTest.get().setParent(retryParentTestNodeMap.get(currentTest.get().getName()));
 					}
 				} else {
-					currentTest.get()
-							.setParent(classNodeMap.get(testClassName.get()));
+					currentTest.get().setParent(classNodeMap.get(testClassName.get()));
 				}
 			}
-		}
-
-		finally {
+		} finally {
 			onTestStartLock.unlockWrite(sLock);
 		}
 	}
@@ -307,11 +298,10 @@ public abstract class AbstractDifidoReporter implements Reporter {
 	@Override
 	public void onConfigurationFailure(ITestResult result) {
 		long sLock = onConfigurationFailLock.writeLock();
-		
+
 		try {
 			onConfigurationOrOnTestFailure(result);
-		}
-		finally {
+		} finally {
 			onConfigurationFailLock.unlockWrite(sLock);
 		}
 
@@ -320,7 +310,6 @@ public abstract class AbstractDifidoReporter implements Reporter {
 	/**
 	 * TestNG generates 2 threads per every test, one for the BeforeMethod, 2nd
 	 * for the test it self
-	 * 
 	 */
 
 	@Override
@@ -338,8 +327,7 @@ public abstract class AbstractDifidoReporter implements Reporter {
 		long sLock = onTestFailLock.writeLock();
 		try {
 			onConfigurationOrOnTestFailure(result);
-		}
-		finally {
+		} finally {
 			onTestFailLock.unlockWrite(sLock);
 		}
 	}
@@ -353,27 +341,25 @@ public abstract class AbstractDifidoReporter implements Reporter {
 				onConfigurationOrOnTestFailure(result);
 			}
 			if (isRetryEnabled.get()) {
-				long elapsedTimeMillis = System.currentTimeMillis()
-						- retryTestDuration.get();
+				long elapsedTimeMillis = System.currentTimeMillis() - retryTestDuration.get();
 				retryTestDuration.set(elapsedTimeMillis);
 				currentTest.get().setParent(null);
 				currentTest.get().setStatus(Status.warning);
-				classNodeMap.get(currentTest.get().getClassName())
-						.addChild(currentRetryParentTest.get());
+				classNodeMap.get(currentTest.get().getClassName()).addChild(currentRetryParentTest.get());
 				currentTest.set(null);
 			}
-		}
-		finally {
+		} finally {
 			onTestSkipLock.unlock(sLock);
 		}
 	}
 
 	@Override
 	public void onFinish(ISuite suite) {
-		currentTestWave.addScenarioProperty("Suite Name",suite.getName());
-		currentTestWave.addScenarioProperty("Date", LocalDateTime.now()
-			       .format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm:ss")));//new SimpleDateFormat("dd/mm/yyyy HH:mm:ss"));
-		
+		currentTestWave.addScenarioProperty("Suite Name", suite.getName());
+		currentTestWave.addScenarioProperty("Date",
+											LocalDateTime.now()
+													.format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm:ss")));//new SimpleDateFormat("dd/mm/yyyy HH:mm:ss"));
+
 		addRunProperty("Date", " dsa");
 		addMachineToExecution(suite.getHost());
 		writeExecution(execution);
@@ -387,39 +373,34 @@ public abstract class AbstractDifidoReporter implements Reporter {
 	/**
 	 * The testNG retry feature has a bug in the start & end milliseconds,
 	 * retryTestDuration is the workaround.
-	 * 
+	 *
 	 * @param result
 	 */
 	private void onTestEnd(ITestResult result) {
 		long sLock = onEndLock.writeLock();
 		try {
 			//if(!validationException.get()){
-			classNodeMap.get(currentTest.get().getClassName())
-					.addChild(currentTest.get());
-			if ((RetryAnalyzer) result.getMethod().getRetryAnalyzer() != null)
-				currentTest.get().setDuration(((System.currentTimeMillis()
-						- result.getStartMillis())));
-			else currentTest.get().setDuration(
-					((result.getEndMillis() - result.getStartMillis())));
+			classNodeMap.get(currentTest.get().getClassName()).addChild(currentTest.get());
+			if ((RetryAnalyzer) result.getMethod().getRetryAnalyzer() != null) {
+				currentTest.get().setDuration(((System.currentTimeMillis() - result.getStartMillis())));
+			} else {
+				currentTest.get().setDuration(((result.getEndMillis() - result.getStartMillis())));
+			}
 
-			currentTestWave
-					.setTestWaveDuration(currentTest.get().getDuration());
-			currentTestWave.addScenarioProperty("duration",
-					Long.toString(currentTestWave.getTestWaveDuration().get()));
+			currentTestWave.setTestWaveDuration(currentTest.get().getDuration());
+			currentTestWave.addScenarioProperty("duration", Long.toString(currentTestWave.getTestWaveDuration().get()));
 			writeTestDetails(testDetails.get());
 			isRetryEnabled.set(false);
 			retryTestDuration.set(0);
-//			}
-//			else validationException.set(false);
-		}
-		finally {
+			//			}
+			//			else validationException.set(false);
+		} finally {
 			onEndLock.unlockWrite(sLock);
 		}
 	}
 
 	protected String generateUid() {
-		return String.valueOf(new Random().nextInt(1000))
-				+ String.valueOf(System.currentTimeMillis() / 1000);
+		return String.valueOf(new Random().nextInt(1000)) + String.valueOf(System.currentTimeMillis() / 1000);
 	}
 
 	/**
@@ -429,9 +410,8 @@ public abstract class AbstractDifidoReporter implements Reporter {
 	 * execution, and the machine is the same as the machine the execution were
 	 * executed on, will append the results to the last machine and will not
 	 * create a new one.
-	 * 
+	 *
 	 * @param context
-	 * 
 	 **/
 	private void addMachineToExecution(String host) {
 		if (null == execution) {
@@ -456,22 +436,6 @@ public abstract class AbstractDifidoReporter implements Reporter {
 		}
 	}
 
-	/**
-	 * Occurs once by the Main thread
-	 * 
-	 * @return
-	 **/
-	private static String getMachineName() {
-		String machineName;
-		try {
-			machineName = InetAddress.getLocalHost().getHostName();
-		}
-		catch (UnknownHostException e) {
-			machineName = "localhost";
-		}
-		return machineName;
-	}
-
 	protected abstract void writeTestDetails(TestDetails testDetails);
 
 	protected abstract void writeExecution(Execution execution);
@@ -483,7 +447,7 @@ public abstract class AbstractDifidoReporter implements Reporter {
 
 	/**
 	 * Event that is called when a new scenario is created
-	 * 
+	 *
 	 * @param scenario
 	 **/
 	protected abstract void onScenarioStart(ScenarioNode scenario);
@@ -495,56 +459,53 @@ public abstract class AbstractDifidoReporter implements Reporter {
 		try {
 
 			if (currentTest.get() != null) {
-				if (isRetryEnabled.get() == false) currentTest.get()
-						.setName(result.getMethod().getConstructorOrMethod()
-								.getMethod().getName() + " - "
-								+ result.getTestName() + " (Thread-id = "
-								+ Thread.currentThread().getId() + ")");
-				if (!classNodeMap.get(currentTest.get().getClassName())
-						.getStatus().equals(Status.failure)) {
-					classNodeMap.get(currentTest.get().getClassName())
-							.getParent().setStatus(Status.failure);
-					classNodeMap.get(currentTest.get().getClassName())
-							.setStatus(Status.failure);
+				if (isRetryEnabled.get() == false) {
+					currentTest.get().setName(result.getMethod().getConstructorOrMethod().getMethod().getName() + " - "
+													  + result.getTestName() + " (Thread-id = " + Thread.currentThread()
+							.getId() + ")");
+				}
+				if (!classNodeMap.get(currentTest.get().getClassName()).getStatus().equals(Status.failure)) {
+					classNodeMap.get(currentTest.get().getClassName()).getParent().setStatus(Status.failure);
+					classNodeMap.get(currentTest.get().getClassName()).setStatus(Status.failure);
 				}
 				currentTest.get().setStatus(Status.failure);
 				reportLastTestException(result);
 				onTestEnd(result);
 
 			}
-		}
-		finally {
+		} finally {
 			onFailLock.unlockWrite(sLock);
 		}
 	}
 
 	/**
 	 * (non-Javadoc)
-	 * 
+	 *
 	 * @see Design.TestBase3.Diffido.Reporter#onTestSkipped(org.testng.ITestResult)
-	 * 
-	 *      (getRetryAnalyzer()).getcounter() > 0) indicates that this specific
-	 *      test has the retry test option enabled, this test should be
-	 *      considered as failed, and also should be marked.
+	 * (getRetryAnalyzer()).getcounter() > 0) indicates that this specific
+	 * test has the retry test option enabled, this test should be
+	 * considered as failed, and also should be marked.
 	 **/
 
 	private void reportLastTestException(ITestResult result) {
 		long sLock = onExceptionLock.writeLock();
 		try {
-			if (null == result) { return; }
+			if (null == result) {
+				return;
+			}
 			// Get the test's last exception
 			final Throwable e = result.getThrowable();
-			if (null == e) { return; }
+			if (null == e) {
+				return;
+			}
 			// Log the test's last unhandled exception
 			String title = null;
 			String message = null;
-			try (StringWriter sw = new StringWriter();
-					PrintWriter pw = new PrintWriter(sw)) {
+			try (StringWriter sw = new StringWriter(); PrintWriter pw = new PrintWriter(sw)) {
 				e.printStackTrace(pw);
 				title = ("The test ended with the following exception:");
 				message = sw.toString();
-			}
-			catch (IOException e1) {
+			} catch (IOException e1) {
 				title = ("The test ended with unknown exception");
 			}
 			if (e instanceof AssertionError) {
@@ -553,32 +514,35 @@ public abstract class AbstractDifidoReporter implements Reporter {
 				log(title, message, Status.failure, ElementType.regular);
 			}
 			result.getThrowable().printStackTrace();
-		}
-		finally {
+		} finally {
 			onExceptionLock.unlockWrite(sLock);
 		}
 	}
 
 	/**
 	 * Event for start of suite
-	 * 
+	 *
 	 * @param suite
 	 **/
 
 	@SuppressWarnings("unused")
 	@Override
-	public void log(String title, String message, Status status,
-			ElementType type) {
+	public void log(String title, String message, Status status, ElementType type) {
 		long sLock = reporterActionLock.writeLock();
 		try {
 			if (type.equals(ElementType.startLevel)) {
 				startLevelOcurrences.getAndIncrement();
 			}
-			if (currentTest.get() == null) return;
-			if (status == Status.failure || status == Status.error
-					|| status == Status.warning)
+			if (currentTest.get() == null) {
+				return;
+			}
+//			if (status == Status.failure || status == Status.error || status == Status.warning) {
 				currentTest.get().setStatus(status);
-			if (null == testDetails.get()) return;
+
+//			}
+			if (null == testDetails.get()) {
+				return;
+			}
 			ReportElement element = new ReportElement();
 			element = updateTimestampAndTitle(element, title);
 			element.setMessage(message);
@@ -595,14 +559,12 @@ public abstract class AbstractDifidoReporter implements Reporter {
 				}
 				writeTestDetails(testDetails.get());
 			}
-		}
-		finally {
+		} finally {
 			reporterActionLock.unlockWrite(sLock);
 		}
 	}
 
-	private ReportElement updateTimestampAndTitle(ReportElement element,
-			String title) {
+	private ReportElement updateTimestampAndTitle(ReportElement element, String title) {
 		//element.setTime(TIME_FORMAT.format(new Date()));
 		element.setTime(String.format("%1$tF", new Date()));
 		element.setTitle(title);
@@ -612,29 +574,32 @@ public abstract class AbstractDifidoReporter implements Reporter {
 	/**
 	 * This method counts all the planned test cases using dataProviders for the
 	 * given ITestNGMethod.
-	 * 
+	 *
 	 * @param method
 	 * @return the number of cases, returns 1 if no dataProvider is found for
-	 *         the test.
+	 * the test.
 	 **/
 
 	public void addTestProperty(String name, String value) {
-		if (null == testDetails) { return; }
+		if (null == testDetails) {
+			return;
+		}
 		currentTest.get().addProperty(name, value);
 	}
 
 	/**
 	 * Add free property to the whole run
-	 * 
+	 *
 	 * @param name
 	 * @param value
 	 **/
 
 	public void addRunProperty(String name, String value) {
-		if (null == currentClassScenario) { return; }
-		log("Adding run proprty '" + name + "'='" + value + "'", null,
-				Status.success, ElementType.regular);
-		
+		if (null == currentClassScenario) {
+			return;
+		}
+		log("Adding run proprty '" + name + "'='" + value + "'", null, Status.success, ElementType.regular);
+
 	}
 
 	protected TestNode getCurrentTest() {
@@ -649,33 +614,32 @@ public abstract class AbstractDifidoReporter implements Reporter {
 		return execution;
 	}
 
-	public void InitACustomTestNode(String testWave, String testClass,
-			String testMethod, Exception e, String iterationNodeName) {
+	public void InitACustomTestNode(String testWave, String testClass, String testMethod, Exception e,
+			String iterationNodeName) {
 		long sLock = onTestCasesValidation.writeLock();
 		try {
 			if (e != null) {
-				if (testCasesValidationClassSet.contains(testClass)) return;
+				if (testCasesValidationClassSet.contains(testClass)) {
+					return;
+				}
 				String iterationName = iterationNodeName;
 				if (testMethod == null) {// theres a validation error on a
-										 // missing testClass node, no need to
-										 // create more than one custom test
-										 // node
-					iterationName = testClass
-							+ " is missing from TestCases xml file";
+					// missing testClass node, no need to
+					// create more than one custom test
+					// node
+					iterationName = testClass + " is missing from TestCases xml file";
 					testCasesValidationClassSet.add(testClass);
 				}
 				testCasesXmlValidationException.set(e);
 				testClassName.set(testClass);
 				if (!testClassNameSet.contains(testClassName.get())) {
 					testClassNameSet.add(testClassName.get());
-					currentClassScenario = new ScenarioNode(
-							testClassName.get());
-					classNodeMap.putIfAbsent(testClassName.get(),
-							currentClassScenario);
+					currentClassScenario = new ScenarioNode(testClassName.get());
+					classNodeMap.putIfAbsent(testClassName.get(), currentClassScenario);
 					currentTestWave = new ScenarioNode(testWave);
 					currentTestWave.addChild(currentClassScenario);
-				} else if (testClassNameSet.contains(testClass) && classNodeMap
-						.get(testClass).getParent().getName() != testWave) {
+				} else if (testClassNameSet.contains(testClass)
+						&& classNodeMap.get(testClass).getParent().getName() != testWave) {
 					currentClassScenario = new ScenarioNode(testClass);
 					classNodeMap.put(testClassName.get(), currentClassScenario);
 					currentTestWave = new ScenarioNode(testWave);
@@ -689,35 +653,29 @@ public abstract class AbstractDifidoReporter implements Reporter {
 				}
 
 				currentThreadId.set(Thread.currentThread().getId());
-				if (iterationName == null) iterationName = testMethod
-						+ " TestCases.xml validation Error";
-				currentTest.set(
-						new TestNode(index.getAndIncrement(), iterationName,
+				if (iterationName == null) {
+					iterationName = testMethod + " TestCases.xml validation Error";
+				}
+				currentTest.set(new TestNode(index.getAndIncrement(), iterationName,
 								/*iterationName.replaceAll("[^a-zA-Z0-9]", "")*/
-										 "test_" + generateUid() + "-"
-										+ index.get()));
+											 "test_" + generateUid() + "-" + index.get()));
 
 				testDetails.set(new TestDetails(currentTest.get().getUid()));
-				currentTest.get()
-						.setParent(classNodeMap.get(testClassName.get()));
+				currentTest.get().setParent(classNodeMap.get(testClassName.get()));
 				currentTest.get().setClassName(testClassName.get());
 				Date date = new Date();
 				currentTest.get().setTimestamp(String.format("%1$tT (%1$tQ)ms", date));
 				currentTest.get().setDate(String.format("%1$tF", date));
 				updateTestDirectory();
-				log("TestCases.xml error", e.getMessage(), Status.failure,
-						ElementType.regular);
-				classNodeMap.get(currentTest.get().getClassName())
-						.addChild(currentTest.get());
+				log("TestCases.xml error", e.getMessage(), Status.failure, ElementType.regular);
+				classNodeMap.get(currentTest.get().getClassName()).addChild(currentTest.get());
 				writeTestDetails(testDetails.get());
 			}
-		}
-		finally {
+		} finally {
 			onTestCasesValidation.unlockWrite(sLock);
 			try {
 				throw e;
-			}
-			catch (Exception e1) {
+			} catch (Exception e1) {
 				e1.printStackTrace();
 			}
 		}

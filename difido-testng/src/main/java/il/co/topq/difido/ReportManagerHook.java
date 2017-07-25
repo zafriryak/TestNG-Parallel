@@ -1,10 +1,7 @@
 package il.co.topq.difido;
 
 
-import org.testng.ISuite;
-import org.testng.ISuiteListener;
-import org.testng.ITestContext;
-import org.testng.ITestResult;
+import org.testng.*;
 import org.testng.internal.IResultListener2;
 
 import infra.parallel.listeners.TestIterationListener;
@@ -15,7 +12,7 @@ import infra.parallel.listeners.testCasesListener;
 
 
 
-public class ReportManagerHook implements IResultListener2, ISuiteListener ,testCasesListener,TestIterationListener{
+public class ReportManagerHook implements IResultListener2, ISuiteListener,IInvokedMethodListener2,testCasesListener,TestIterationListener{
 
 	/**
 	 * From some reason, TestNG is calling the suite events number of times.
@@ -117,5 +114,23 @@ public class ReportManagerHook implements IResultListener2, ISuiteListener ,test
 		reporterInstance.validateTestMandatoryParamsAlert(testWaveXmlNode,testClassXmlNode,testMethodXmlNode,e);
 	}
 
+	@Override
+	public void beforeInvocation(IInvokedMethod method, ITestResult testResult, ITestContext context) {
+		reporterInstance.beforeInvocation(method,testResult,context);
+	}
 
+	@Override
+	public void afterInvocation(IInvokedMethod method, ITestResult testResult, ITestContext context) {
+		reporterInstance.afterInvocation(method,testResult,context);
+	}
+
+	@Override
+	public void beforeInvocation(IInvokedMethod method, ITestResult testResult) {
+		reporterInstance.beforeInvocation(method,testResult);
+	}
+
+	@Override
+	public void afterInvocation(IInvokedMethod method, ITestResult testResult) {
+		reporterInstance.afterInvocation(method,testResult);
+	}
 }
