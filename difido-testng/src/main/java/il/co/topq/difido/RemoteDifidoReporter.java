@@ -1,23 +1,16 @@
 package il.co.topq.difido;
 
-
 import il.co.topq.difido.RemoteDifidoProperties.RemoteDifidoOptions;
+import il.co.topq.difido.model.Enums;
 import il.co.topq.difido.model.execution.Execution;
 import il.co.topq.difido.model.execution.ScenarioNode;
 import il.co.topq.difido.model.remote.ExecutionDetails;
 import il.co.topq.difido.model.test.TestDetails;
+import org.testng.ISuite;
 
 import java.io.File;
 import java.util.Map;
 import java.util.logging.Logger;
-
-import org.testng.ISuite;
-import org.testng.ITestResult;
-
-
-
-
-
 
 public class RemoteDifidoReporter extends AbstractDifidoReporter {
 
@@ -54,7 +47,7 @@ public class RemoteDifidoReporter extends AbstractDifidoReporter {
 
 	/**
 	 * Event for end of suite
-	 * 
+	 *
 	 * @param suite
 	 */
 	@Override
@@ -94,16 +87,15 @@ public class RemoteDifidoReporter extends AbstractDifidoReporter {
 			log.fine(RemoteDifidoReporter.class.getName() + " was initialized successfully");
 		} catch (Throwable t) {
 			enabled = false;
-			log.warning("Failed to init " + RemoteDifidoReporter.class.getName() + "connection with host '" + host
-					+ ":" + port + "' due to " + t.getMessage());
+			log.warning("Failed to init " + RemoteDifidoReporter.class.getName() + "connection with host '" + host + ":"
+								+ port + "' due to " + t.getMessage());
 		}
 
 	}
 
 	private int prepareExecution() throws Exception {
 		// Fetching properties
-		final boolean appendToExistingExecution = difidoProps
-				.getPropertyAsBoolean(RemoteDifidoOptions.APPEND_TO_EXISTING_EXECUTION);
+		final boolean appendToExistingExecution = difidoProps.getPropertyAsBoolean(RemoteDifidoOptions.APPEND_TO_EXISTING_EXECUTION);
 		final boolean useSharedExecution = difidoProps.getPropertyAsBoolean(RemoteDifidoOptions.USE_SHARED_EXECUTION);
 		final String description = difidoProps.getPropertyAsString(RemoteDifidoOptions.DESCRIPTION);
 		final int id = difidoProps.getPropertyAsInt(RemoteDifidoOptions.EXISTING_EXECUTION_ID);
@@ -125,11 +117,9 @@ public class RemoteDifidoReporter extends AbstractDifidoReporter {
 		return client.addExecution(details);
 	}
 
-	
 	/**
-	 * We want to add all the execution properties for each scenario. This will
-	 * eventually appear in the ElasticSearch
-	 * 
+	 * We want to add all the execution properties for each scenario. This will eventually appear in the ElasticSearch
+	 *
 	 * @param scenario
 	 */
 	@Override
@@ -141,9 +131,8 @@ public class RemoteDifidoReporter extends AbstractDifidoReporter {
 				scenario.addScenarioProperty(key, details.getExecutionProperties().get(key));
 			}
 		}
-		
-	}
 
+	}
 
 	@Override
 	protected void writeTestDetails(TestDetails testDetails) {
@@ -177,7 +166,7 @@ public class RemoteDifidoReporter extends AbstractDifidoReporter {
 		numOfFailures++;
 		if (numOfFailures > MAX_NUM_OF_ALLOWED_FAILURES) {
 			log.warning("Communication to server has failed more then " + MAX_NUM_OF_ALLOWED_FAILURES
-					+ ". Disabling report reporter");
+								+ ". Disabling report reporter");
 			enabled = false;
 		}
 	}
@@ -203,7 +192,17 @@ public class RemoteDifidoReporter extends AbstractDifidoReporter {
 		// the current test folder
 	}
 
-
+	/**
+	 * Assuming there is no need to escape the HTML in this reporter, and that the remote reporter can do whatever it
+	 * wants.
+	 *
+	 * @param type
+	 * @return
+	 */
+	@Override
+	protected boolean shouldEscapeHtml(Enums.ElementType type) {
+		return false;
+	}
 
 	protected int getExecutionId() {
 		return executionId;
@@ -213,7 +212,5 @@ public class RemoteDifidoReporter extends AbstractDifidoReporter {
 	public String getCurrentTestFolder() {
 		return null;
 	}
-	
-	
 
 }
