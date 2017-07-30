@@ -1,5 +1,6 @@
 package il.co.topq.difido;
 
+import il.co.topq.difido.model.Enums;
 import il.co.topq.difido.model.Enums.ElementType;
 import il.co.topq.difido.model.Enums.Status;
 import il.co.topq.difido.model.execution.Execution;
@@ -32,16 +33,29 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.StampedLock;
 
+import static org.apache.commons.text.StringEscapeUtils.escapeHtml4;
+
 /**
  * @author Ben Mark
  **/
 
 public abstract class AbstractDifidoReporter implements Reporter {
 
+	private static final SimpleDateFormat DATE_FORMAT = new SimpleDateFormat("dd/MM/yyyy");
+	private final StampedLock onBeforeConfigLock = new StampedLock();
+	private final StampedLock onTestInitLock = new StampedLock();
+	private final StampedLock onTestStartLock = new StampedLock();
+	private final StampedLock onTestSkipLock = new StampedLock();
+	private final StampedLock onEndLock = new StampedLock();
+	private final StampedLock reporterActionLock = new StampedLock();
+	private final StampedLock onExceptionLock = new StampedLock();
+	private final StampedLock onFailLock = new StampedLock();
+	private final StampedLock onConfigurationFailLock = new StampedLock();
+	private final StampedLock onTestFailLock = new StampedLock();
+	private final StampedLock onTestCasesValidation = new StampedLock();
 	private ThreadLocal<SimpleDateFormat> testTimeElapsed = new ThreadLocal<>();
 	private AtomicLong currentThreadId = new AtomicLong();
 	private AtomicInteger startLevelOcurrences = new AtomicInteger(0);
-	private static final SimpleDateFormat DATE_FORMAT = new SimpleDateFormat("dd/MM/yyyy");
 	private AtomicBoolean currentTestNameWasSet = new AtomicBoolean(false);
 	private ConcurrentHashSet<String> testClassNameSet;
 	private ConcurrentMap<String, ScenarioNode> classNodeMap;
@@ -54,17 +68,6 @@ public abstract class AbstractDifidoReporter implements Reporter {
 	private AtomicInteger index = new AtomicInteger(0);
 	private volatile ThreadLocal<String> testClassName = new ThreadLocal<String>();
 	private AtomicLong lastWrite = new AtomicLong();
-	private final StampedLock onBeforeConfigLock = new StampedLock();
-	private final StampedLock onTestInitLock = new StampedLock();
-	private final StampedLock onTestStartLock = new StampedLock();
-	private final StampedLock onTestSkipLock = new StampedLock();
-	private final StampedLock onEndLock = new StampedLock();
-	private final StampedLock reporterActionLock = new StampedLock();
-	private final StampedLock onExceptionLock = new StampedLock();
-	private final StampedLock onFailLock = new StampedLock();
-	private final StampedLock onConfigurationFailLock = new StampedLock();
-	private final StampedLock onTestFailLock = new StampedLock();
-	private final StampedLock onTestCasesValidation = new StampedLock();
 	private ConcurrentHashMap<String, ScenarioNode> testWaveMap;
 	private ConcurrentHashSet<ScenarioNode> currentMachinechildren;
 	private ThreadLocal<ScenarioNode> currentRetryParentTest = new ThreadLocal<>();
@@ -133,8 +136,7 @@ public abstract class AbstractDifidoReporter implements Reporter {
 	}
 
 	/**
-	 * set scenarioNode aka testWave from beforeConf to create the wave
-	 * parentNode
+	 * set scenarioNode aka testWave from beforeConf to create the wave parentNode
 	 **/
 
 	@Override
@@ -192,12 +194,10 @@ public abstract class AbstractDifidoReporter implements Reporter {
 	}
 
 	/**
-	 * Since this class contains shared-data and exclusive thread data, some of
-	 * the fields like currentClassScenario for example, must be set only once,
-	 * since it is a shared data, every thread will try to set a copy of this
-	 * value it can't be allocated into every thread's stack, therefore it must
-	 * remain shared. To overcome the ambiguity of sharedData being initialized
-	 * on every thread run.
+	 * Since this class contains shared-data and exclusive thread data, some of the fields like currentClassScenario for
+	 * example, must be set only once, since it is a shared data, every thread will try to set a copy of this value it
+	 * can't be allocated into every thread's stack, therefore it must remain shared. To overcome the ambiguity of
+	 * sharedData being initialized on every thread run.
 	 *
 	 * @param result
 	 **/
@@ -308,8 +308,7 @@ public abstract class AbstractDifidoReporter implements Reporter {
 	}
 
 	/**
-	 * TestNG generates 2 threads per every test, one for the BeforeMethod, 2nd
-	 * for the test it self
+	 * TestNG generates 2 threads per every test, one for the BeforeMethod, 2nd for the test it self
 	 */
 
 	@Override
@@ -371,8 +370,7 @@ public abstract class AbstractDifidoReporter implements Reporter {
 	}
 
 	/**
-	 * The testNG retry feature has a bug in the start & end milliseconds,
-	 * retryTestDuration is the workaround.
+	 * The testNG retry feature has a bug in the start & end milliseconds, retryTestDuration is the workaround.
 	 *
 	 * @param result
 	 */
@@ -404,12 +402,10 @@ public abstract class AbstractDifidoReporter implements Reporter {
 	}
 
 	/**
-	 * If no execution exists. Meaning, we are not appending to an older
-	 * execution; A new execution would be created. If the execution is new,
-	 * will add a new reported machine instance. If we are appending to an older
-	 * execution, and the machine is the same as the machine the execution were
-	 * executed on, will append the results to the last machine and will not
-	 * create a new one.
+	 * If no execution exists. Meaning, we are not appending to an older execution; A new execution would be created. If
+	 * the execution is new, will add a new reported machine instance. If we are appending to an older execution, and
+	 * the machine is the same as the machine the execution were executed on, will append the results to the last
+	 * machine and will not create a new one.
 	 *
 	 * @param context
 	 **/
@@ -481,10 +477,9 @@ public abstract class AbstractDifidoReporter implements Reporter {
 	/**
 	 * (non-Javadoc)
 	 *
-	 * @see Design.TestBase3.Diffido.Reporter#onTestSkipped(org.testng.ITestResult)
-	 * (getRetryAnalyzer()).getcounter() > 0) indicates that this specific
-	 * test has the retry test option enabled, this test should be
-	 * considered as failed, and also should be marked.
+	 * @see Design.TestBase3.Diffido.Reporter#onTestSkipped(org.testng.ITestResult) (getRetryAnalyzer()).getcounter() >
+	 * 0) indicates that this specific test has the retry test option enabled, this test should be considered as failed,
+	 * and also should be marked.
 	 **/
 
 	private void reportLastTestException(ITestResult result) {
@@ -524,10 +519,13 @@ public abstract class AbstractDifidoReporter implements Reporter {
 	 *
 	 * @param suite
 	 **/
-
 	@SuppressWarnings("unused")
 	@Override
 	public void log(String title, String message, Status status, ElementType type) {
+		boolean escapeHtml = shouldEscapeHtml(type);
+		if (escapeHtml) {
+			message = escapeHtml4(message);
+		}
 		long sLock = reporterActionLock.writeLock();
 		try {
 			if (type.equals(ElementType.startLevel)) {
@@ -536,10 +534,10 @@ public abstract class AbstractDifidoReporter implements Reporter {
 			if (currentTest.get() == null) {
 				return;
 			}
-//			if (status == Status.failure || status == Status.error || status == Status.warning) {
-				currentTest.get().setStatus(status);
+			//			if (status == Status.failure || status == Status.error || status == Status.warning) {
+			currentTest.get().setStatus(status);
 
-//			}
+			//			}
 			if (null == testDetails.get()) {
 				return;
 			}
@@ -564,6 +562,8 @@ public abstract class AbstractDifidoReporter implements Reporter {
 		}
 	}
 
+	protected abstract boolean shouldEscapeHtml(ElementType type);
+
 	private ReportElement updateTimestampAndTitle(ReportElement element, String title) {
 		//element.setTime(TIME_FORMAT.format(new Date()));
 		element.setTime(String.format("%1$tF", new Date()));
@@ -572,12 +572,10 @@ public abstract class AbstractDifidoReporter implements Reporter {
 	}
 
 	/**
-	 * This method counts all the planned test cases using dataProviders for the
-	 * given ITestNGMethod.
+	 * This method counts all the planned test cases using dataProviders for the given ITestNGMethod.
 	 *
 	 * @param method
-	 * @return the number of cases, returns 1 if no dataProvider is found for
-	 * the test.
+	 * @return the number of cases, returns 1 if no dataProvider is found for the test.
 	 **/
 
 	public void addTestProperty(String name, String value) {
